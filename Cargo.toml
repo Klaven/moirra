@@ -1,0 +1,6 @@
+[workspace]
+members = [
+	"chat",
+	"twitch_api",
+	"moirra",
+]
