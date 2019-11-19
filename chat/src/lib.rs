@@ -1,3 +1,5 @@
+pub mod irc;
+
 #[cfg(test)]
 mod tests {
     #[test]
