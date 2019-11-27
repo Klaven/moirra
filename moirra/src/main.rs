@@ -17,6 +17,11 @@ use chat::clients::twitch_client::TwitchClient;
 struct Cli {
     #[structopt(long = "config", short = "c")]
     config: Option<String>,
+
+    #[structopt(long = "user", short = "u")]
+    user: Option<String>,
+
+    
 }
 
 fn main() {
@@ -29,7 +34,14 @@ fn main() {
         Some(_) => println!("lajsdf;"),
         _ => println!("no match"),
     }
-    let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,"klavenx");
+
+    //TODO: make user required
+    let user = match args.user {
+        Some(usr) => usr,
+        _ => "klavenx".to_string(),
+    };
+
+    let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,&user);
 
     println!("Hello, world!");
 
