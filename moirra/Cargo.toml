@@ -11,8 +11,9 @@ quicli = "0.4"
 structopt = "0.3.4"
 
 # for testing only. remove soon
-tokio = "*"
-tokio-tungstenite = "0.9.0"
+tokio = "0.1"
+tungstenite = "*"
 url = "2.1.0"
 futures = "0.1.23"
-tungstenite = "*"
+tokio-tungstenite = "*"
+chat = { path = "../chat" }

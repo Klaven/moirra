@@ -1,4 +1,4 @@
-pub mod irc;
+pub mod clients;
 
 #[cfg(test)]
 mod tests {

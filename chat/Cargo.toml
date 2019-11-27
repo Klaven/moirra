@@ -11,4 +11,6 @@ url = "2.1.0"
 tokio = "0.1.22"
 env_logger = "0.7.1"
 log = "0.4.8"
-
+tungstenite = "*"
+tokio-tungstenite = "*"
+futures = "0.1.29"
