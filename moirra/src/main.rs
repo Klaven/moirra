@@ -43,6 +43,9 @@ fn main() {
 
     let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,&user);
 
+    let res = twitch_client.send("whats up twitch");
+
+    println!("test: {:?}", res);
     println!("Hello, world!");
 
     loop {};

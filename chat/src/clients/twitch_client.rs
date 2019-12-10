@@ -10,6 +10,7 @@ use futures::{Future, Sink, Stream};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::stream::PeerAddr;
 
+
 pub struct TwitchClient {
     sender: mpsc::Sender<Message>,
     user: String,
@@ -17,13 +18,13 @@ pub struct TwitchClient {
 
 impl TwitchClient {
 
-    pub fn send(&mut self, msg: &str) -> Result<(),()> {
-        let ws_msg = Message::Text(format!("PRIVMSG #{} {}", self.user, msg).into());
+    pub fn send(&self, msg: &str) -> Result<(),()> {
+        let ws_msg = Message::Text(format!("PRIVMSG #{} :{}", self.user, msg).into());
         println!("private message sent: {}", format!("PRIVMSG #{} {}", self.user, msg));
         return self.send_raw(ws_msg);
     }
 
-    pub fn send_raw(&mut self, msg: Message) -> Result<(),()> {
+    pub fn send_raw(&self, msg: Message) -> Result<(),()> {
         let sender = self.sender.clone();
 
         match sender.send(msg).wait() {
@@ -96,9 +97,6 @@ impl TwitchClient {
         println!("sending the {}", twitch_join);
         tc.send_raw(Message::Text(twitch_join.into()));
 
-        println!("sending the boom");
-        tc.send("boom");
-        
         return tc;
     }
 }
