@@ -13,6 +13,7 @@ use tokio_tungstenite::stream::PeerAddr;
 
 pub struct TwitchClient {
     sender: mpsc::Sender<Message>,
+    rec: mpsc::Receiver<Message>,
     user: String,
 }
 
@@ -39,10 +40,11 @@ impl TwitchClient {
         return Ok(());
     }
 
-    pub fn new(url: &str, auth: &str, usr: &str) -> TwitchClient {
+    pub fn new(url: &str, auth: &str, usr: &str, read: &dyn Fn(String)) -> TwitchClient {
         let url = Url::parse(url).unwrap();
         let mut stdout = io::stdout();
         let (mut stdin_tx, stdin_rx) = mpsc::channel(0);
+        let (mut msg_send, msg_r) = mpsc::channel(0);
         let stdin_rx = stdin_rx.map_err(|_| panic!());
         let client = connect_async(url)
             .and_then(move |(ws_stream, _)| {
@@ -61,7 +63,15 @@ impl TwitchClient {
                 // the stdin, to the `sink`.
                 let send_stdin = stdin_rx.forward(sink);
                 let write_stdout = stream.for_each(move |message| {
-                    stdout.write_all(&message.into_data()).unwrap();
+                    let sender = msg_send.clone();
+                    match sender.send(message).wait() {
+                        Ok(_) => {
+                            println!("0");
+                        },
+                        Err(_) => {
+                            println!("channel closed");
+                        },
+                    };
                     Ok(())
                 });
 
@@ -82,6 +92,7 @@ impl TwitchClient {
         });
         let mut tc = TwitchClient{
             sender: stdin_tx.clone(),
+            rec: msg_r,
             user: usr.to_string().clone(),
         };
 

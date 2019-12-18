@@ -51,3 +51,8 @@ fn main() {
     loop {};
 }
 
+fn read(msg: &str) {
+    println!("{}",msg);
+}
+
+
