@@ -40,7 +40,7 @@ impl TwitchClient {
         return Ok(());
     }
 
-    pub fn new(url: &str, auth: &str, usr: &str, read: &dyn Fn(String)) -> TwitchClient {
+    pub fn new(url: &str, auth: &str, usr: &str) -> TwitchClient {
         let url = Url::parse(url).unwrap();
         let mut stdout = io::stdout();
         let (mut stdin_tx, stdin_rx) = mpsc::channel(0);
