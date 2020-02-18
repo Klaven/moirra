@@ -1,15 +1,13 @@
 use std::env;
 use std::{thread,time};
-use std::io::{self, Read, Write};
 
-use tungstenite::{connect, Message};
 use url::Url;
 
-use futures::sync::mpsc;
 use futures::{Future, Sink, Stream};
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::stream::PeerAddr;
+use async_tungstenite::tokio::connect_async;
+use async_tungstenite::tungstenite::Message;
 
+use tokio::sync::mpsc;
 
 pub struct TwitchClient {
     sender: mpsc::Sender<Message>,
@@ -19,16 +17,16 @@ pub struct TwitchClient {
 
 impl TwitchClient {
 
-    pub fn send(&self, msg: &str) -> Result<(),()> {
+    pub async fn send(&self, msg: &str) -> Result<(),()> {
         let ws_msg = Message::Text(format!("PRIVMSG #{} :{}", self.user, msg).into());
         println!("private message sent: {}", format!("PRIVMSG #{} {}", self.user, msg));
-        return self.send_raw(ws_msg);
+        return self.send_raw(ws_msg).await;
     }
 
-    pub fn send_raw(&self, msg: Message) -> Result<(),()> {
+    pub async fn send_raw(&self, msg: Message) -> Result<(),()> {
         let sender = self.sender.clone();
 
-        match sender.send(msg).wait() {
+        match sender.send(msg).await {
             Ok(_) => {
                 println!("0");
             },
@@ -40,7 +38,34 @@ impl TwitchClient {
         return Ok(());
     }
 
-    pub fn new(url: &str, auth: &str, usr: &str) -> TwitchClient {
+    pub async fn new(url: &str, auth: &str, usr: &str) -> TwitchClient {
+
+        let connect_addr = env::args()
+            .nth(1)
+            .unwrap_or_else(|| panic!("this program requires at least one argument"));
+
+        let (stdin_tx, stdin_rx) = futures::channel::mpsc::unbounded();
+
+        let (ws_stream, _) = connect_async(url)
+            .await
+            .expect("Failed to connect");
+        println!("WebSocket handshake has been successfully completed");
+
+        let (write, read) = ws_stream.split();
+
+        let stdin_to_ws = stdin_rx.map(Ok).forward(write);
+        let ws_to_stdout = {
+            read.for_each(|message| async {
+                let data = message.unwrap().into_data();
+                async_std::io::stdout().write_all(&data).await.unwrap();
+            })
+        };
+
+        pin_mut!(stdin_to_ws, ws_to_stdout);
+        future::select(stdin_to_ws, ws_to_stdout).await;
+
+
+
         let url = Url::parse(url).unwrap();
         let mut stdout = io::stdout();
         let (mut stdin_tx, stdin_rx) = mpsc::channel(0);
@@ -90,13 +115,13 @@ impl TwitchClient {
         thread::spawn(move || {
             tokio::runtime::run(client.map_err(|_e| ()));
         });
+
         let mut tc = TwitchClient{
             sender: stdin_tx.clone(),
             rec: msg_r,
             user: usr.to_string().clone(),
         };
-
-        
+ 
         let twitch_auth = format!("PASS {}",auth);
         tc.send_raw(Message::Text(twitch_auth.into()));
 

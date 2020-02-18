@@ -7,10 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-url = "2.1.0"
-tokio = "0.1.22"
+url = "2.1.1"
+tokio = { version = "0.2.11", features = ["full"] }
 env_logger = "0.7.1"
 log = "0.4.8"
-tungstenite = "*"
-tokio-tungstenite = "*"
-futures = "0.1.29"
+futures = "0.3.4"
+async-tungstenite = { version = "0.4.0", features = ["tokio-runtime"] }
