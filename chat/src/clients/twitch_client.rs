@@ -3,15 +3,15 @@ use std::{thread,time};
 
 use url::Url;
 
-use futures::{Future, Sink, Stream};
 use async_tungstenite::tokio::connect_async;
 use async_tungstenite::tungstenite::Message;
-
+use futures::prelude::*;
+use tokio::prelude::*;
 use tokio::sync::mpsc;
 
 pub struct TwitchClient {
-    sender: mpsc::Sender<Message>,
-    rec: mpsc::Receiver<Message>,
+    sender: mpsc::UnboundedSender<Message>,
+    rec: mpsc::UnboundedReceiver<Message>,
     user: String,
 }
 
@@ -44,7 +44,7 @@ impl TwitchClient {
             .nth(1)
             .unwrap_or_else(|| panic!("this program requires at least one argument"));
 
-        let (stdin_tx, stdin_rx) = futures::channel::mpsc::unbounded();
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel(); 
 
         let (ws_stream, _) = connect_async(url)
             .await
@@ -53,18 +53,23 @@ impl TwitchClient {
 
         let (write, read) = ws_stream.split();
 
-        let stdin_to_ws = stdin_rx.map(Ok).forward(write);
+        //let stdin_to_ws = stdin_rx.map(Ok).forward(write);
+        let ws_in = rx.forward(write);
         let ws_to_stdout = {
             read.for_each(|message| async {
                 let data = message.unwrap().into_data();
-                async_std::io::stdout().write_all(&data).await.unwrap();
+                println!("{:?}",&data);
+                //async_std::io::stdout().write_all(&data).await.unwrap();
             })
         };
+        
+        let handle = tokio::task::spawn( ws_to_stdout );
 
-        pin_mut!(stdin_to_ws, ws_to_stdout);
-        future::select(stdin_to_ws, ws_to_stdout).await;
-
-
+        let mut tc = TwitchClient{
+            sender: tx.clone(),
+            rec: msg_r,
+            user: usr.to_string().clone(),
+        };
 
         let url = Url::parse(url).unwrap();
         let mut stdout = io::stdout();
