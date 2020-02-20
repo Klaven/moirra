@@ -4,13 +4,12 @@ use std::env;
 use std::{thread,time};
 use std::io::{self, Read, Write};
 
-use tungstenite::{connect, Message};
 use url::Url;
+use async_tungstenite::tokio::connect_async;
+use async_tungstenite::tungstenite::Message;
 
 use futures::sync::mpsc;
 use futures::{Future, Sink, Stream};
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::stream::PeerAddr;
 use chat::clients::twitch_client::TwitchClient;
 
 #[derive(Debug,StructOpt)]
@@ -24,7 +23,8 @@ struct Cli {
     
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Cli::from_args();
 
     let key = "TWITCH_TOKEN";
@@ -41,9 +41,9 @@ fn main() {
         _ => "klavenx".to_string(),
     };
 
-    let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,&user);
+    let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,&user).await;
 
-    let res = twitch_client.send("whats up twitch");
+    let res = twitch_client.send("whats up twitch").await;
 
     println!("test: {:?}", res);
     println!("Hello, world!");
