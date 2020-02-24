@@ -13,12 +13,17 @@ pub struct TwitchClient {
     sender: tokio::sync::mpsc::UnboundedSender<Message>,
     rec: tokio::sync::mpsc::UnboundedReceiver<Message>,
     user: String,
+    ws_done_join_handle: tokio::task::JoinHandle<()>,
 }
 
 impl TwitchClient {
 
+    pub fn done(self) -> tokio::task::JoinHandle<()> {
+        self.ws_done_join_handle
+    }
+
     pub async fn send(&self, msg: &str) -> Result<(),()> {
-        let msg_fmt = format!("PRIVMSG #{} :{}", self.user, msg);
+        let msg_fmt = format!("PRIVMSG #{} :{}\r\n", self.user, msg);
         let ws_msg = Message::Text(msg_fmt.clone().into());
         println!("private message sent: {}", msg_fmt);
         return self.send_raw(ws_msg).await;
@@ -29,7 +34,7 @@ impl TwitchClient {
 
         match sender.send(msg) {
             Ok(_) => {
-                println!("ws write ok");
+                println!("ws channel write ok");
             },
             Err(_) => {
                 println!("channel closed");
@@ -40,10 +45,6 @@ impl TwitchClient {
     }
 
     pub async fn new(url: &str, auth: &str, usr: &str) -> TwitchClient {
-
-        let connect_addr = env::args()
-            .nth(1)
-            .unwrap_or_else(|| panic!("this program requires at least one argument"));
 
         let (tx, rx): (tokio::sync::mpsc::UnboundedSender<Message>,tokio::sync::mpsc::UnboundedReceiver<Message>)
                        = tokio::sync::mpsc::unbounded_channel(); 
@@ -57,22 +58,29 @@ impl TwitchClient {
         let (write, read) = ws_stream.split();
 
         let something = rx.map(Ok).forward(write);
-        //let ws_in = rx.forward(write);
         
         let ws_to_stdout = {
             read.for_each(|message| async {
-                let mg = message.unwrap().clone();
-                let data = mg.clone().into_data();
-                println!("{:?}",&data);
+                match message {
+                    Ok(data) => {
+                        let data = data.clone().into_data();
+                        println!("On WS Message: {:?}",&data);
+                    },
+                    Err(err) => println!("channel closed? {}", err)
+                }
             })
         };
+
+        let fut = async move { ws_to_stdout.await; println!("websocked closed");};
         
-        let handle = tokio::task::spawn( ws_to_stdout );
+        let h2 = tokio::task::spawn(something);
+        let handle = tokio::task::spawn(fut);
 
         let mut tc = TwitchClient{
             sender: tx.clone(),
             rec: output_rx,
             user: usr.to_string().clone(),
+            ws_done_join_handle: handle,
         };
 
         let twitch_auth = format!("PASS {}",auth);
@@ -85,7 +93,6 @@ impl TwitchClient {
         let twitch_join = format!("JOIN #{}",usr);
         println!("sending the {}", twitch_join);
         tc.send_raw(Message::Text(twitch_join.into())).await;
-
         return tc;
     }
 }

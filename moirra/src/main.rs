@@ -47,6 +47,8 @@ async fn main() {
 
     println!("test: {:?}", res);
     println!("Hello, world!");
+    
+    twitch_client.done().await;
 
     loop {};
 }
