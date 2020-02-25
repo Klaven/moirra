@@ -4,10 +4,6 @@ use std::env;
 use std::{thread,time};
 use std::io::{self, Read, Write};
 
-use url::Url;
-use async_tungstenite::tokio::connect_async;
-use async_tungstenite::tungstenite::Message;
-
 use futures::sync::mpsc;
 use futures::{Future, Sink, Stream};
 use chat::clients::twitch_client::TwitchClient;
@@ -43,14 +39,10 @@ async fn main() {
 
     let twitch_client = TwitchClient::new("wss://irc-ws.chat.twitch.tv:443",&res,&user).await;
 
-    let res = twitch_client.send("whats up twitch").await;
-
-    println!("test: {:?}", res);
-    println!("Hello, world!");
-    
-    twitch_client.done().await;
-
-    loop {};
+    // twitch_client.done().await;
+    loop {
+      thread::sleep_ms(30000);
+    }
 }
 
 fn read(msg: &str) {
