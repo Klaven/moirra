@@ -12,7 +12,6 @@ use async_tungstenite::WebSocketStream;
 
 pub struct TwitchClient {
     sender: tokio::sync::mpsc::UnboundedSender<Message>,
-    rec: tokio::sync::mpsc::UnboundedReceiver<Message>,
     user: String,
     ws_done_join_handle: tokio::task::JoinHandle<()>,
 }
@@ -60,12 +59,19 @@ impl TwitchClient {
 
         let something = rx.map(Ok).forward(write);
         
+        let parsing_future = {
+            output_rx.for_each(|message| async {
+                        let data = message.clone().into_data();
+                        println!("On WS Message: {:?}",std::str::from_utf8(&data).unwrap());
+            })
+        };
+
         let ws_to_stdout = {
+                let output = output_tx.clone();
                 read.for_each(|message| async {
                     match message {
                         Ok(data) => {
-                            let data = data.clone().into_data();
-                            println!("On WS Message: {:?}",std::str::from_utf8(&data).unwrap());
+                            output.send(data);
                         },
                         Err(err) => println!("channel closed? {}", err)
                     }
@@ -79,7 +85,6 @@ impl TwitchClient {
 
         let mut tc = TwitchClient{
             sender: tx.clone(),
-            rec: output_rx,
             user: usr.to_string().clone(),
             ws_done_join_handle: handle,
         };
