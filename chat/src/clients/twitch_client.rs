@@ -66,16 +66,16 @@ impl TwitchClient {
             })
         };
 
+        let output = output_tx.clone();
         let ws_to_stdout = {
-                let output = output_tx.clone();
-                read.for_each(|message| async {
-                    match message {
-                        Ok(data) => {
-                            output.send(data);
-                        },
-                        Err(err) => println!("channel closed? {}", err)
-                    }
-                })
+            read.for_each(move |message| async {
+                match message {
+                    Ok(data) => {
+                        output.send(data);
+                    },
+                    Err(err) => println!("channel closed? {}", err)
+                }
+            })
         };
 
         let fut = async move { ws_to_stdout.await; println!("websocked closed");};

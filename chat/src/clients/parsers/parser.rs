@@ -8,7 +8,6 @@ pub struct Parser {
 pub enum EventType {
     All,
     PrivateMsg,
-
 }
 
 impl Parser {
